@@ -50,7 +50,7 @@
     
   - name: copying the war file from source to tomcat
     copy:
-      src: "{{ war_path }}/sparkjava-war-example/target/hello-world.war"
+      src: "{{ war_path }}/target/hello-world.war"
       dest: /home/softwares/tomcat/webapps/
     notify: restart tomcat
     
