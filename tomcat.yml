@@ -1,0 +1,65 @@
+---
+- name: Playbook for tomcat server installation
+  hosts: webapp
+  become: yes
+  vars:
+    tomcat_url: https://www-eu.apache.org/dist/tomcat/tomcat-8/v8.5.37/bin/apache-tomcat-8.5.37.tar.gz
+  tasks:
+  - name: installing wget
+    yum:
+      name: wget
+      state: present
+      
+  - name: downloading java package
+    command: 'wget --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "https://download.oracle.com/otn-pub/java/jdk/8u201-b09/42970487e3af4f5aa5bca3f542482c60/jdk-8u201-linux-x64.rpm" -O /opt/jdk-8u201-linux-x64.rpm'
+    args:
+      creates: /opt/jdk-8u201-linux-x64.rpm
+    
+  - name: installing java
+    yum:
+      name: /opt/jdk-8u201-linux-x64.rpm
+      state: present
+      
+  - name: Creating software folder
+    file:
+      path: /home/softwares/
+      mode: 0755
+      state: directory
+      
+  - name: Download the tomcat software
+    unarchive:
+      src: "{{ tomcat_url }}"
+      dest: /home/softwares/
+      remote_src: yes
+    args:
+      creates: /home/softwares/tomcat/bin/startup.sh
+      
+  - name: Renaming the tomcat folder
+    shell: mv /home/softwares/apache-tomcat-8.5.37 /home/softwares/tomcat
+    args:
+      creates: /home/softwares/tomcat/bin/startup.sh
+      
+  - name: starting the tomcat server
+    shell: 'nohup /home/softwares/tomcat/bin/startup.sh'
+    args:
+      creates: /home/softwares/tomcat/webapps/hello-world.war
+      
+  - name: Getting present working directory
+    shell: pwd
+    register: playbook_dir
+    
+  - name: copying the war file from source to tomcat
+    copy:
+      src: "{{ war_path }}/sparkjava-war-example/target/hello-world.war"
+      dest: /home/softwares/tomcat/webapps/
+    notify: restart tomcat
+    
+  - name: enabling 8080 port
+    systemd:
+      name: firewalld
+      enabled: no
+      state: stopped
+       
+  handlers:
+    - name: restart tomcat
+      shell: '/home/softwares/tomcat/bin/shutdown.sh && sleep 10 && nohup /home/softwares/tomcat/bin/startup.sh'
